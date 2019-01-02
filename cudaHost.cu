@@ -95,6 +95,28 @@ bool CudaHost::copySolutions(EquihashContext *context, uint32_t &solutionCount, 
 	return (error == cudaSuccess);
 }
 
+void CudaHost::processSolutions(int64_t workId, uint64_t nonce, uint32_t solutionCount, uint32_t *solutions) {
+	for (uint32_t solutionIndex = 0, *solution = solutions; solutionIndex < solutionCount; ++solutionIndex, solution += 32) {
+		for (uint32_t level = 0; level < 5; level++) {
+			for (uint32_t *p1 = solution, *p2 = p1 + (1 << 5); p1 != p2; p1 += (2 << level))
+				sortPair(p1, 1 << level);
+		}
+		std::vector<uint32_t> indices(solution, solution + 32);
+		stratum_->handleSolution(workId, nonce, indices);
+	}
+}
+
+void CudaHost::sortPair(uint32_t *a, uint32_t len) {
+	uint32_t need_sorting = 0;
+	for (uint32_t *b = a + len, *aEnd = b; a < aEnd; ++a, ++b) {
+		if (need_sorting || *a > *b) {
+			need_sorting = 1;
+			std::swap(*a, *b);
+		} else if (*a < *b)
+			return;
+	}
+}
+
 void CudaHost::workerLoop(int deviceIndex, int cudaDeviceIndex) {
 	std::string deviceName;
 	EquihashContext *context = initializeContext(cudaDeviceIndex, deviceName);
@@ -114,10 +136,10 @@ void CudaHost::workerLoop(int deviceIndex, int cudaDeviceIndex) {
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
-		int64_t id;
+		int64_t workId;
 		uint64_t nonce;
 		uint64_t blockHeader[4];
-		stratum_->getWork(&id, &nonce, reinterpret_cast<uint8_t *>(blockHeader));
+		stratum_->getWork(&workId, &nonce, reinterpret_cast<uint8_t *>(blockHeader));
 
 		round0<<<stringCount / (3 * 256), 256>>>(context, blockHeader[0], blockHeader[1], blockHeader[2], blockHeader[3], nonce);
 		round1<<<BucketLayout0::bucketCount * BucketLayout0::masking, 1024>>>(context);
@@ -132,6 +154,7 @@ void CudaHost::workerLoop(int deviceIndex, int cudaDeviceIndex) {
 			std::cout << "Error on GPU" << cudaDeviceIndex << std::endl;
 			return;
 		}
+		processSolutions(workId, nonce, solutionCount, solutions.data());
 		if (solutionCount >= EquihashContext::maxSolutionCount)
 			solutionCount = EquihashContext::maxSolutionCount;
 		{
