@@ -19,7 +19,7 @@ public:
 private:
 	EquihashContext *initializeContext(int cudaDeviceIndex, std::string &deviceName);
 	bool copySolutions(EquihashContext *context, uint32_t &solutionCount, uint32_t *solutions);
-	void processSolutions(int64_t workId, uint64_t nonce, uint32_t solutionCount, uint32_t *solutions);
+	void processSolutions(beamStratum::WorkDescription wd, uint32_t solutionCount, uint32_t *solutions);
 	static void sortPair(uint32_t *a, uint32_t len);
 	void workerLoop(int deviceIndex, int cudaDeviceIndex);
 
