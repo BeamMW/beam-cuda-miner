@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.1) 
-project(beam-opencl-miner LANGUAGES CXX CUDA)
+project(beam-opencl-miner LANGUAGES CXX)
 set(TARGET_NAME beam-cuda-miner)
+
+if(UNIX AND NOT APPLE)
+    set(LINUX TRUE)
+endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CUDA_FLAGS "-arch=sm_50")
-
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
+find_package(CUDA REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system date_time regex thread)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
@@ -35,9 +38,14 @@ endif()
 set(OPENSSL_MSVC_STATIC_RT ON)
 find_package(OpenSSL REQUIRED)
 if( OpenSSL_FOUND )
+    set(OPENSSL_USE_STATIC_LIBS TRUE)
     link_directories(${OPENSSL_LIBRARIES})
     include_directories(${OPENSSL_INCLUDE_DIR})
     message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
+
+    # cmake can't find static lib on macos, harcoded
+    set(OPENSSL_LIBCRYPTO /usr/lib/x86_64-linux-gnu/libcrypto.a)
+    set(OPENSSL_LIBSSL /usr/lib/x86_64-linux-gnu/libssl.a)
 else()
     message(FATAL_ERROR "error, OpenSSL not found, please install: 'apt-get install libssl-dev' on Ubuntu")
 endif()
@@ -57,12 +65,15 @@ set(MINER_SRC
     beam/utility/common.cpp
 )
 
-add_executable(${TARGET_NAME} ${MINER_SRC} ${HEADERS}  )
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11 -gencode arch=compute_50,code=sm_50)
+
+CUDA_ADD_EXECUTABLE(${TARGET_NAME} ${MINER_SRC} ${HEADERS} )
 
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/beam)
 
 if(LINUX)
-	target_link_libraries(${TARGET_NAME} -static-libstdc++ -static-libgcc)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+    target_link_libraries(${TARGET_NAME} -static-libstdc++ -static-libgcc)
 endif()
 
 if(MSVC)
