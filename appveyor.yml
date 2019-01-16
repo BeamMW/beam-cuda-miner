@@ -2,7 +2,7 @@ version: '{build}'
 image: Visual Studio 2017
 
 environment:
-  BOOST_ROOT: C:\Libraries\boost_1_67_0
+  BOOST_ROOT: C:\Libraries\boost_1_69_0
   OPENSSL_ROOT_DIR: c:\beam-libs\openssl
   BUILD_SERVER:
     secure: l9RqB2YbSnNIKZqTwnd67BHAXvbjmpj9zcf+YQPi9zfzsVeSysaoLD7gy4gSMjWurk2JVHjRpviw4bBxUbu2sA==
@@ -11,6 +11,8 @@ environment:
   - arch: Win64
 
 before_build:
+  - cmd: appveyor DownloadFile http://builds.beam-mw.com/files/libs/boost_1_69_0.7z
+  - cmd: 7z x boost_1_69_0.7z -oC:\Libraries
   - cmd: git clone --depth=1 https://github.com/BeamMW/libs.git c:/beam-libs
   - cmd: appveyor DownloadFile https://developer.nvidia.com/compute/cuda/10.0/Prod/local_installers/cuda_10.0.130_411.31_win10 -FileName cuda.exe    
   - cmd: cuda.exe -s nvcc_10.0 nvprune_10.0 cublas_dev_10.0 cufft_dev_10.0 curand_dev_10.0 cusolver_dev_10.0 cusparse_dev_10.0 nvgraph_dev_10.0 npp_dev_10.0 nvrtc_dev_10.0 nvml_dev_10.0
