@@ -20,7 +20,7 @@ before_install:
   - export TZ=Etc/GMT-3
   - wget "https://cmake.org/files/v3.13/cmake-3.13.3-Linux-x86_64.sh"
   - sudo sh cmake-3.13.3-Linux-x86_64.sh --skip-license --prefix=/usr
-  - eval "CC=gcc-7 && CXX=g++-7 &&  CUDACXX=/usr/local/cuda-10.0/bin/nvcc"
+  - eval "CC=gcc-7 && CXX=g++-7 && CUDACXX=/usr/local/cuda-10.0/bin/nvcc"
 env: 
   - BUILD_TYPE=Release OS_FOLDER=linux
 script:
