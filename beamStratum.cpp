@@ -398,7 +398,7 @@ void beamStratum::handleSolution(int64_t &workId, uint64_t &nonce, vector<uint32
 }
 
 
-beamStratum::beamStratum(string hostIn, string portIn, string apiKeyIn, bool debugIn) : res(io_service), context(boost::asio::ssl::context::tls)  {
+beamStratum::beamStratum(string hostIn, string portIn, string apiKeyIn, bool debugIn) : res(io_service), context(boost::asio::ssl::context::tlsv12)  {
 
 	context.set_options(	  boost::asio::ssl::context::default_workarounds
 				| boost::asio::ssl::context::no_sslv2
