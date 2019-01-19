@@ -95,14 +95,14 @@ bool CudaHost::copySolutions(EquihashContext *context, uint32_t &solutionCount, 
 	return (error == cudaSuccess);
 }
 
-void CudaHost::processSolutions(beamStratum::WorkDescription wd, uint32_t solutionCount, uint32_t *solutions) {
+void CudaHost::processSolutions(int64_t workId, uint64_t nonce, uint32_t solutionCount, uint32_t *solutions) {
 	for (uint32_t solutionIndex = 0, *solution = solutions; solutionIndex < solutionCount; ++solutionIndex, solution += 32) {
 		for (uint32_t level = 0; level < 5; level++) {
 			for (uint32_t *p1 = solution, *p2 = p1 + (1 << 5); p1 != p2; p1 += (2 << level))
 				sortPair(p1, 1 << level);
 		}
 		std::vector<uint32_t> indices(solution, solution + 32);
-		stratum_->handleSolution(wd, indices);
+		stratum_->handleSolution(workId, nonce, indices);
 	}
 }
 
@@ -136,12 +136,10 @@ void CudaHost::workerLoop(int deviceIndex, int cudaDeviceIndex) {
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			continue;
 		}
-
-		beamStratum::WorkDescription wd;
+		int64_t workId;
 		uint64_t nonce;
 		uint64_t blockHeader[4];
-		stratum_->getWork(wd, reinterpret_cast<uint8_t *>(blockHeader));
-		nonce = wd.nonce;
+		stratum_->getWork(&workId, &nonce, reinterpret_cast<uint8_t *>(blockHeader));
 
 		round0<<<stringCount / (3 * 256), 256>>>(context, blockHeader[0], blockHeader[1], blockHeader[2], blockHeader[3], nonce);
 		round1<<<BucketLayout0::bucketCount * BucketLayout0::masking, 1024>>>(context);
@@ -156,7 +154,7 @@ void CudaHost::workerLoop(int deviceIndex, int cudaDeviceIndex) {
 			std::cout << "Error on GPU" << cudaDeviceIndex << std::endl;
 			return;
 		}
-		processSolutions(wd, solutionCount, solutions.data());
+		processSolutions(workId, nonce, solutionCount, solutions.data());
 		if (solutionCount >= EquihashContext::maxSolutionCount)
 			solutionCount = EquihashContext::maxSolutionCount;
 		{
