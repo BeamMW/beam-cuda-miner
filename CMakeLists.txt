@@ -1,19 +1,15 @@
 cmake_minimum_required(VERSION 3.1) 
-project(beam-cuda-miner)
+project(beam-cuda-miner LANGUAGES CXX CUDA)
 set(TARGET_NAME beam-cuda-miner)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(CMAKE_CUDA_FLAGS "-arch=sm_50")
 
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_STATIC_RUNTIME ON)
-
-set(OPENSSL_USE_STATIC_LIBS TRUE)
-
-find_package(CUDA REQUIRED)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -std=c++11 -gencode arch=compute_50,code=sm_50)
-
 find_package(Boost REQUIRED COMPONENTS system thread)
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
@@ -21,6 +17,7 @@ if(Boost_FOUND)
 endif()
 
 if (MSVC)
+
     # use static runtime
     foreach(flag_var CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
@@ -32,22 +29,32 @@ if (MSVC)
         endif(${flag_var} MATCHES "/MD")
     endforeach(flag_var)
 
-    set(OPENSSL_USE_STATIC_LIBS TRUE)
-    set(OPENSSL_MSVC_STATIC_RT TRUE)
+    # use static runtime for cuda
+    foreach(flag_var CMAKE_CUDA_FLAGS CMAKE_CUDA_FLAGS_DEBUG
+        CMAKE_CUDA_FLAGS_RELEASE 
+        CMAKE_CUDA_FLAGS_RELWITHDEBINFO
+        CMAKE_CUDA_FLAGS_MINSIZEREL)
+
+        if(${flag_var} MATCHES "-MD")
+            string(REGEX REPLACE "-MD" "-MT" ${flag_var} "${${flag_var}}")
+        endif()
+
+    endforeach(flag_var)
+
+    set(OPENSSL_MSVC_STATIC_RT ON)
+    
 endif()
 
+set(OPENSSL_USE_STATIC_LIBS ON)
 
 find_package(OpenSSL REQUIRED)
-if( OpenSSL_FOUND )   
+if( OpenSSL_FOUND )
     link_directories(${OPENSSL_LIBRARIES})
     include_directories(${OPENSSL_INCLUDE_DIR})
     message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
 else()
     message(FATAL_ERROR "error, OpenSSL not found, please install: 'apt-get install libssl-dev' on Ubuntu")
 endif()
-
-
-
 
 set (HEADERS
     beam/utility/common.h
@@ -64,7 +71,7 @@ set(MINER_SRC
     beam/utility/common.cpp
 )
 
-cuda_add_executable(${TARGET_NAME} ${MINER_SRC} ${HEADERS}  )
+add_executable(${TARGET_NAME} ${MINER_SRC} ${HEADERS}  )
 
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/beam)
 target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/clHeaders)
@@ -72,6 +79,7 @@ target_include_directories(${TARGET_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/clH
 if(UNIX)
     find_package(Threads)
     target_link_libraries(${TARGET_NAME} Threads::Threads)
+    target_link_libraries(${TARGET_NAME} -static-libstdc++ -static-libgcc)
 endif()
 
 if(MSVC)
