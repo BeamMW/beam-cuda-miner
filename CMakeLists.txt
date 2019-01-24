@@ -5,7 +5,7 @@ set(TARGET_NAME beam-cuda-miner)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CUDA_FLAGS "-arch=sm_50")
+set(CMAKE_CUDA_FLAGS "-std=c++11 -arch=sm_50")
 
 set(Boost_USE_MULTITHREADED ON)
 set(Boost_USE_STATIC_LIBS ON)
