@@ -211,6 +211,12 @@ void beamStratum::readStratum(const boost::system::error_code& err) {
 					// Get the target difficulty
 					uint32_t stratDiff =  jsonTree.get<uint32_t>("difficulty");
 					powDiff = beam::Difficulty(stratDiff);
+
+					// NiceHash support
+					if (jsonTree.count("nonceprefix") > 0) {
+						string poolNonceStr = jsonTree.get<string>("nonceprefix");
+						poolNonce = parseHex(poolNonceStr);
+					} 
 					updateMutex.unlock();	
 
 					cout << "New work received with id " << workId << " at difficulty " << powDiff.ToFloat() << endl;	
